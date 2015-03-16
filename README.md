@@ -1,10 +1,37 @@
 # frequent-algorithm [![Gem Version](https://badge.fury.io/rb/frequent-algorithm.svg)](http://badge.fury.io/rb/frequent-algorithm) [![Build Status](https://travis-ci.org/buruzaemon/frequent-algorithm.svg)](https://travis-ci.org/buruzaemon/frequent-algorithm)
 
+Web site usage, social network behavior and Internet traffic are examples
+of systems that appear to follow the [power law](http://en.wikipedia.org/wiki/Power_law),
+where most of the events are due to the actions of a very small few.
+Knowing at any given point in time which items are trending is valuable
+in understanding the system.
+
 `frequent-algorithm` is a Ruby implementation of the FREQUENT algorithm
 for identifying frequent items in a data stream in sliding windows.
 Please refer to [Identifying Frequent Items in Sliding Windows over On-Line
 Packet Streams](http://erikdemaine.org/papers/SlidingWindow_IMC2003/), by
 Golab, DeHaan, Demaine, L&#243;pez-Ortiz and Munro (2003).
+
+## Introduction
+
+### Challenges
+
+Challenges for Real-time processing of data streams for _frequent item queries_
+include:
+
+* data may be of unknown and possibly unbound length
+* data may be arriving a very fast rate
+* it might not be possible to go back and re-read the data
+* too large a window of observation may include stale data
+
+Therefore, a solution should have the following characteristics:
+
+* uses limited memory
+* can process events in the stream in &#927;(1) constant time
+* requires only a single-pass over the data
+
+
+### The algorithm 
 
 > LOOP<br/>
 > 1. For each element e in the next b elements:<br/>
@@ -33,18 +60,31 @@ Golab, DeHaan, Demaine, L&#243;pez-Ortiz and Munro (2003).
 >
 > &mdash; <cite>Golab, DeHaan, Demaine, López-Ortiz and Munro. Identifying Frequent Items in Sliding Windows over On-Line Packet Streams, 2003</cite>
 
-## Getting Started
-
-Bacon ipsum dolor amet short loin flank swine ham hock tail. T-bone biltong
-beef shoulder salami, leberkas pork chop ribeye pork belly ground round. Filet
-mignon pork chop spare ribs brisket pastrami picanha bacon, biltong beef ribs
-corned beef ham hock tail. Meatloaf kielbasa turducken, salami chuck beef ribs
-venison hamburger t-bone landjaeger pork chop drumstick sausage bacon.
-
 
 ## Usage
 
     require 'frequent-algorithm'
+
+    # data is pi to 1000 digits
+    pi = File.read('test/frequent/test_data_pi').strip
+    data = pi.scan(/./).each_slice(b)
+    
+    N = 100  # size of main window
+    b =  20  # size of basic window
+    k =   3  # we are interested in top-3 numerals in pi
+  
+    alg = Frequent::Algorithm.new(N, b, k) 
+
+    # read in and process the 1st basic window
+    alg.process(data.next)
+
+    # and the top-3 numerals are?
+    top3 = alg.statistics.report
+    puts top3
+
+    # lather, rinse and repeat
+    alg.process(data.next)
+    
 
 ## Development 
 
@@ -54,6 +94,7 @@ The development of this gem requires the following:
 * [rubygems](https://rubygems.org/pages/download)
 * [`bundler`](https://github.com/bundler/bundler)
 * [`rake`](https://github.com/ruby/rake)
+* [`minitest`](https://rubygems.org/gems/minitest) (unit testing)
 * [`yard`](https://rubygems.org/gems/yard) (documentation)
 * [`rdiscount`](https://rubygems.org/gems/rdiscount) (Markdown)
 
@@ -91,10 +132,14 @@ Please refer to Publishing To Rubygems.org in the
 ### Contributing
 
 1. Fork it
-2. Create your feature branch (`git checkout -b my-new-feature`)
-3. Commit your changes (`git commit -am 'Add some feature'`)
-4. Push to the branch (`git push origin my-new-feature`)
-5. Create new Pull Request
+2. Begin work on `dev-branch` (`git fetch && git checkout dev-branch`)
+3. Create your feature branch (`git branch my-new-feature && git checkout
+   my-new-feature`)
+4. Commit your changes (`git commit -am 'Add some feature'`)
+5. Push to the branch (`git push origin my-new-feature:dev-branch`)
+6. Create new Pull Request
+
+You may wish to read the [Git book online](http://git-scm.com/book/en/v2).
 
 
 ## License

@@ -2,6 +2,15 @@ require 'frequent/version'
 
 module Frequent
 
+  # `Frequent::Algorithm` is the Ruby implementation of the
+  # Demaine et al. FREQUENT algorithm for calculating 
+  # top-k items in a stream.
+  #
+  # The aims of this algorithm are:
+  # * uses limited memory
+  # * requires constant processing time per item
+  # * is single-pass
+  #
   class Algorithm
     # @return [Integer] the number of items in the main window
     attr_reader :n
@@ -47,9 +56,58 @@ module Frequent
     # window in the internal global queue; and then updating 
     # the global statistics accordingly.
     # 
-    # @param [Object] a countable, immutable object.
-    def process(item)
-      raise NotImplementedError.new
+    # @param [Array] an array of objects representing a basic window
+    def process(elements)
+      # Do we need this?
+      return if elements.length != @b
+
+      # Step 1
+      summary = {}
+      elements.each do |e|
+        if summary.key? e
+          summary[e] += 1
+        else
+          summary[e] = 1
+        end
+      end
+      # if summary.size < k
+      threshold = [summary.length, @k].min - 1
+
+      # Step 2 & 3
+      # summary is [[item,count],[item,count],[item,count]....]
+      # sorted by descending order of the item count
+      summary = summary.sort { |a,b| b[1]<=>a[1] }[0..threshold]
+      @queue << summary
+
+      # Step 4
+      summary.each do |t|
+        if @statistics.key? t[0]
+          @statistics[t[0]] += t[1]
+        else
+          @statistics[t[0]] = t[1]
+        end
+      end
+
+      # Step 5
+      @delta += summary[threshold][1]
+      
+      # Step 6
+      if @queue.length > @n/@b
+        # a
+        summary_p = @queue.shift
+        @delta -= summary_p[@k-1][1]
+
+        # b
+        summary_p.each { |t| @statistics[t[0]] -= t[1] }
+        @statistics.delete_if { |k,v| v <= 0 }
+      end
+    end
+
+    # Return all items from global counter whose count > delta
+    #
+    # @return [Hash] the items whose count > delta
+    def report
+      @statistics.select { |k,v| v > @delta }
     end
 
     # Returns the version for this gem.
